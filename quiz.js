@@ -1,5 +1,6 @@
-// Trắc nghiệm lịch sử: questions are generated from the same period data (P)
-// that drives the timeline, so the quiz always agrees with what the site shows.
+// Trắc nghiệm lịch sử: questions are generated from the same period (P) and
+// people (PEOPLE) data that drive the timeline, so the quiz always agrees with
+// what the site shows.
 // P rows: [start, end, dynasty, leader, state, capital, confidence, summary, event1, event2]
 (function (root) {
   'use strict';
@@ -41,68 +42,115 @@
     return out.length === 3 ? out : null;
   }
 
-  function makeQuestion(kind, i, P, rand) {
-    var p = P[i];
-    var options, correct, prompt;
-    if (kind === 'capital') {
-      correct = p[5];
-      prompt = 'Kinh đô / trung tâm chính trị ' + era(p[2]) + ' (' + rangeLabel(p) + ') ở đâu?';
-      options = distractors(P.map(function (q) { return q[5]; }), correct, rand);
-    } else if (kind === 'leader') {
-      correct = p[3];
-      prompt = 'Ai là người cầm quyền tiêu biểu của ' + era(p[2]) + ' (' + rangeLabel(p) + ')?';
-      options = distractors(P.map(function (q) { return q[3]; }), correct, rand);
-    } else if (kind === 'state') {
-      correct = p[4];
-      prompt = 'Quốc hiệu / chính thể ' + era(p[2]) + ' là gì?';
-      options = distractors(P.map(function (q) { return q[4]; }), correct, rand);
-    } else if (kind === 'start') {
-      correct = yearLabel(p[0]);
-      prompt = era(p[2], true) + ' bắt đầu vào năm nào?';
-      options = distractors(P.map(function (q) { return yearLabel(q[0]); }), correct, rand);
-    } else if (kind === 'event') {
-      // Only ask "which period" for events that appear in exactly one period.
-      var event = p[8];
-      var owners = P.filter(function (q) { return norm(q[8]) === norm(event) || norm(q[9]) === norm(event); });
-      if (!event || owners.length !== 1) return null;
-      correct = p[2];
-      prompt = 'Sự kiện “' + event + '” thuộc thời kỳ nào?';
-      options = distractors(P.map(function (q) { return q[2]; }), correct, rand);
-    } else if (kind === 'order') {
-      var j = Math.floor(rand() * P.length);
-      if (j === i || P[j][0] === p[0] || norm(P[j][2]) === norm(p[2])) return null;
-      var earlier = p[0] < P[j][0] ? p : P[j];
-      return {
-        kind: kind, period: P.indexOf(earlier),
-        prompt: 'Thời kỳ nào diễn ra SỚM HƠN?',
-        options: shuffle([p[2], P[j][2]], rand), answer: earlier[2],
-        explain: p[2] + ': ' + rangeLabel(p) + ' · ' + P[j][2] + ': ' + rangeLabel(P[j]) + '.'
-      };
-    }
+  function periodQuestion(kind, i, P, prompt, correct, pool, rand) {
+    var options = distractors(pool, correct, rand);
     if (!options || !correct) return null;
     return {
       kind: kind, period: i, prompt: prompt,
       options: shuffle(options.concat(correct), rand), answer: correct,
-      explain: p[2] + ' (' + rangeLabel(p) + '): ' + p[7]
+      explain: P[i][2] + ' (' + rangeLabel(P[i]) + '): ' + P[i][7]
     };
   }
+  function pick(list, rand) { return list[Math.floor(rand() * list.length)]; }
+  function col(P, k) { return P.map(function (q) { return q[k]; }); }
 
-  // Builds `count` distinct questions, mixing kinds and periods.
+  // People who belong to Vietnamese history and to exactly one period, so
+  // "which period?" has a single right answer.
+  function vnPeople(people) {
+    return (people || []).filter(function (x) {
+      return x && x.relevance === 'direct' && x.region === 'Việt Nam' && x.name;
+    });
+  }
+
+  // ---- Question kinds -------------------------------------------------------
+  // To add a new kind of question, add an entry here (or call
+  // SuVietQuiz.addQuestionKind from another script). make(data, rand) returns
+  // {kind, period, prompt, options, answer, explain} or null to skip.
+  var KINDS = [
+    { kind: 'capital', make: function (d, rand) {
+      var i = Math.floor(rand() * d.P.length), p = d.P[i];
+      return periodQuestion('capital', i, d.P, 'Kinh đô / trung tâm chính trị ' + era(p[2]) + ' (' + rangeLabel(p) + ') ở đâu?', p[5], col(d.P, 5), rand);
+    } },
+    { kind: 'leader', make: function (d, rand) {
+      var i = Math.floor(rand() * d.P.length), p = d.P[i];
+      return periodQuestion('leader', i, d.P, 'Ai là người cầm quyền tiêu biểu của ' + era(p[2]) + ' (' + rangeLabel(p) + ')?', p[3], col(d.P, 3), rand);
+    } },
+    { kind: 'start', make: function (d, rand) {
+      var i = Math.floor(rand() * d.P.length), p = d.P[i];
+      return periodQuestion('start', i, d.P, era(p[2], true) + ' bắt đầu vào năm nào?', yearLabel(p[0]), d.P.map(function (q) { return yearLabel(q[0]); }), rand);
+    } },
+    { kind: 'event', make: function (d, rand) {
+      var i = Math.floor(rand() * d.P.length), p = d.P[i], event = p[8];
+      // Only ask "which period" for events that appear in exactly one period.
+      var owners = d.P.filter(function (q) { return norm(q[8]) === norm(event) || norm(q[9]) === norm(event); });
+      if (!event || owners.length !== 1) return null;
+      return periodQuestion('event', i, d.P, 'Sự kiện “' + event + '” thuộc thời kỳ nào?', p[2], col(d.P, 2), rand);
+    } },
+    { kind: 'order', make: function (d, rand) {
+      var i = Math.floor(rand() * d.P.length), j = Math.floor(rand() * d.P.length), p = d.P[i], q = d.P[j];
+      if (j === i || q[0] === p[0] || norm(q[2]) === norm(p[2])) return null;
+      var earlier = p[0] < q[0] ? p : q;
+      return {
+        kind: 'order', period: d.P.indexOf(earlier),
+        prompt: 'Thời kỳ nào diễn ra SỚM HƠN?',
+        options: shuffle([p[2], q[2]], rand), answer: earlier[2],
+        explain: p[2] + ': ' + rangeLabel(p) + ' · ' + q[2] + ': ' + rangeLabel(q) + '.'
+      };
+    } },
+    { kind: 'state', make: function (d, rand) {
+      var i = Math.floor(rand() * d.P.length), p = d.P[i];
+      return periodQuestion('state', i, d.P, 'Quốc hiệu / chính thể ' + era(p[2]) + ' là gì?', p[4], col(d.P, 4), rand);
+    } },
+    { kind: 'person-era', make: function (d, rand) {
+      var person = pick(vnPeople(d.people).filter(function (x) { return x.eraHints && x.eraHints.length === 1; }), rand);
+      if (!person) return null;
+      var i = person.eraHints[0], p = d.P[i];
+      if (!p) return null;
+      // Wrong answers: periods this person has nothing to do with.
+      var pool = d.P.filter(function (q, k) { return k !== i; }).map(function (q) { return q[2]; });
+      var options = distractors(pool, p[2], rand);
+      if (!options) return null;
+      return {
+        kind: 'person-era', period: i,
+        prompt: person.name + ' gắn với thời kỳ nào?',
+        options: shuffle(options.concat(p[2]), rand), answer: p[2],
+        explain: person.name + ': ' + person.summary + ' (' + p[2] + ', ' + rangeLabel(p) + ')'
+      };
+    } },
+    { kind: 'era-person', make: function (d, rand) {
+      var people = vnPeople(d.people).filter(function (x) { return x.eraHints && x.eraHints.length; });
+      var person = pick(people, rand);
+      if (!person) return null;
+      var i = pick(person.eraHints, rand), p = d.P[i];
+      if (!p) return null;
+      // Wrong answers: Vietnamese figures with no link to this period.
+      var others = people.filter(function (x) { return x.eraHints.indexOf(i) < 0; }).map(function (x) { return x.name; });
+      var options = distractors(others, person.name, rand);
+      if (!options) return null;
+      return {
+        kind: 'era-person', period: i,
+        prompt: 'Nhân vật nào gắn với ' + era(p[2]) + ' (' + rangeLabel(p) + ')?',
+        options: shuffle(options.concat(person.name), rand), answer: person.name,
+        explain: person.name + ': ' + person.summary
+      };
+    } }
+  ];
+
+  function addQuestionKind(kind, make) { KINDS.push({ kind: kind, make: make }); }
+
+  // Builds `count` distinct questions, cycling through the question kinds.
   function buildQuiz(P, opts) {
     opts = opts || {};
     var rand = rng(opts.seed);
     var count = opts.count || QUIZ_LENGTH;
-    var kinds = ['capital', 'leader', 'start', 'event', 'order', 'state'];
+    var data = { P: P, people: opts.people || [] };
+    var kinds = KINDS.filter(function (k) { return data.people.length || k.kind.indexOf('person') < 0; });
     var out = [], used = {}, tries = 0;
-    while (out.length < count && tries < 500) {
+    while (out.length < count && tries < 800) {
       tries++;
-      var kind = kinds[out.length % kinds.length];
-      var i = Math.floor(rand() * P.length);
-      var q = makeQuestion(kind, i, P, rand);
-      if (!q) continue;
-      var key = q.prompt;
-      if (used[key]) continue;
-      used[key] = true;
+      var q = kinds[(out.length + tries) % kinds.length].make(data, rand);
+      if (!q || used[q.prompt]) continue;
+      used[q.prompt] = true;
       out.push(q);
     }
     return shuffle(out, rand);
@@ -227,7 +275,7 @@
     }
 
     function start() {
-      state = { questions: buildQuiz(P), i: 0, score: 0, answered: false, wrong: [] };
+      state = { questions: buildQuiz(P, { people: typeof PEOPLE !== 'undefined' ? PEOPLE : [] }), i: 0, score: 0, answered: false, wrong: [] };
       renderQuestion();
     }
 
@@ -239,7 +287,7 @@
     start();
   }
 
-  var api = { buildQuiz: buildQuiz, yearLabel: yearLabel, QUIZ_LENGTH: QUIZ_LENGTH };
+  var api = { buildQuiz: buildQuiz, addQuestionKind: addQuestionKind, yearLabel: yearLabel, QUIZ_LENGTH: QUIZ_LENGTH };
   root.SuVietQuiz = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root.document) {

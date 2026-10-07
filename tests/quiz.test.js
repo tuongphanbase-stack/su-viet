@@ -6,13 +6,18 @@ const pSrc = src.slice(src.indexOf('const P=['), src.indexOf('];', src.indexOf('
 const sandbox = {}; vm.createContext(sandbox);
 vm.runInContext(pSrc.replace('const P=', 'P='), sandbox);
 const P = sandbox.P;
+const peopleLine = src.split('\n').find(l => l.startsWith('const PEOPLE='));
+vm.runInContext(peopleLine.replace('const PEOPLE=', 'PEOPLE='), sandbox);
+const PEOPLE = sandbox.PEOPLE;
+assert.ok(PEOPLE.length > 50, 'people data loads');
 assert.ok(Array.isArray(P) && P.length > 20, 'period data loads');
 const { buildQuiz, yearLabel } = require(path.join(root, 'quiz.js'));
 const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase().trim();
 
 let checked = 0;
+const kinds = new Set();
 for (let seed = 1; seed <= 200; seed++) {
-  const quiz = buildQuiz(P, { seed });
+  const quiz = buildQuiz(P, { seed, people: PEOPLE });
   assert.strictEqual(quiz.length, 10, `seed ${seed}: 10 questions`);
   assert.strictEqual(new Set(quiz.map(q => q.prompt)).size, 10, `seed ${seed}: no repeated question`);
   for (const q of quiz) {
@@ -30,6 +35,20 @@ for (let seed = 1; seed <= 200; seed++) {
       const ev = q.prompt.match(/“(.+)”/)[1];
       assert.strictEqual(P.filter(r => norm(r[8]) === norm(ev) || norm(r[9]) === norm(ev)).length, 1, 'event belongs to one period only');
     }
+    if (q.kind === 'person-era') {
+      const person = PEOPLE.find(x => q.prompt.startsWith(x.name + ' '));
+      assert.ok(person && person.eraHints.length === 1, 'person-era uses a single-period person');
+      assert.strictEqual(q.answer, P[person.eraHints[0]][2]);
+    }
+    if (q.kind === 'era-person') {
+      const person = PEOPLE.find(x => x.name === q.answer);
+      assert.ok(person.eraHints.includes(q.period), 'the right person belongs to the period');
+      for (const o of q.options.filter(o => o !== q.answer)) {
+        const other = PEOPLE.find(x => x.name === o);
+        assert.ok(!other.eraHints.includes(q.period), `wrong option ${o} must not belong to the period`);
+      }
+    }
+    kinds.add(q.kind);
     if (q.kind === 'order') {
       const others = q.options.filter(o => o !== q.answer).map(o => P.find(r => r[2] === o));
       assert.ok(others.every(o => o[0] > p[0]), 'answer is the earlier period');
@@ -37,6 +56,9 @@ for (let seed = 1; seed <= 200; seed++) {
     checked++;
   }
 }
+assert.ok(kinds.has('person-era') && kinds.has('era-person'), 'people questions appear');
+// Without people data the quiz still works with period questions only.
+assert.strictEqual(buildQuiz(P, { seed: 3 }).length, 10);
 assert.strictEqual(yearLabel(-2879), '2879 TCN');
 assert.strictEqual(yearLabel(938), '938');
 console.log(`quiz validation passed: ${checked} questions across 200 quizzes`);
