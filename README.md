@@ -23,11 +23,20 @@ Plain HTML, CSS and JavaScript with no build step:
   it on the timeline; the result screen lists what to review, and the best
   score is remembered. Keys 1–4 pick an answer.
 
+- **Richer eras and people** (`history-details.js`): every period has a dated
+  timeline (the "Sự kiện" tab and the end of each story) and its own text on
+  politics, economy, culture and war. Twenty key figures get a longer story
+  and a dated life, and 22 more figures are added (Lữ Gia, Sĩ Nhiếp, Tô Hiến
+  Thành, Chu Văn An, Nguyễn Bỉnh Khiêm, Lê Quý Đôn, Nguyễn Du, Võ Thị Sáu…).
+  To add more, edit only `history-details.js`; `history-extend.js` shows it.
+
 ## Tests
 
 `node tests/quiz.test.js` builds 200 quizzes and checks every question:
 the marked answer really is that period's fact, options are distinct, and
 no question repeats within a round.
+`node tests/history-details.test.js` checks the extra era and people data
+(every era covered, ids unique, relations point to real people).
 
 ## Viewing it
 

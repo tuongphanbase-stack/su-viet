@@ -44,3 +44,12 @@
 .quiz-review span{font-size:13px;color:var(--muted)}
 .quiz-review .quiz-link{justify-self:start}
 @media(max-width:700px){.quiz-options{grid-template-columns:1fr}.quiz-card{padding:24px 16px}}
+
+/* Era timelines (history-extend.js) */
+.era-timeline{list-style:none;margin:14px 0;padding:0 0 0 18px;border-left:2px solid #b88d3c}
+.era-timeline li{position:relative;margin:0 0 14px;padding-left:8px}
+.era-timeline li:before{content:"";position:absolute;left:-23px;top:6px;width:8px;height:8px;border-radius:50%;background:#8d2f28}
+.era-timeline strong{display:block;color:#8d2f28;font-size:12px;letter-spacing:.02em}
+.era-timeline span{display:block;margin-top:2px;line-height:1.6}
+.story-timeline{margin:22px 0;padding:16px 18px;background:#fffaf0;border:1px solid var(--line)}
+.story-timeline>small{display:block;color:#8d2f28;font-size:9px;font-weight:800;letter-spacing:.08em}
