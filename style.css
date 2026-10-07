@@ -53,3 +53,5 @@
 .era-timeline span{display:block;margin-top:2px;line-height:1.6}
 .story-timeline{margin:22px 0;padding:16px 18px;background:#fffaf0;border:1px solid var(--line)}
 .story-timeline>small{display:block;color:#8d2f28;font-size:9px;font-weight:800;letter-spacing:.08em}
+.foot a{color:#e4bf74;font-weight:700;text-decoration:none;white-space:nowrap}
+.foot a:hover,.foot a:focus-visible{text-decoration:underline}

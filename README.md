@@ -42,3 +42,29 @@ no question repeats within a round.
 
 Open `index.html` in a browser, or publish it with GitHub Pages
 (Settings -> Pages -> Source: `main` branch, `/` root).
+
+## Install on a phone and use offline
+
+Sử Việt can be installed as an app and works without a network once it has
+been opened online.
+
+1. Open https://tuongphanbase-stack.github.io/su-viet/ on the phone and let
+   the page load fully.
+2. Install it:
+   - **Android (Chrome, Edge, Samsung Internet):** menu ⋮ -> *Install app*
+     (or *Add to Home screen*).
+   - **iPhone / iPad (Safari):** Share button -> *Add to Home Screen*.
+3. Start it from the home-screen icon (the 史 seal). It opens full screen.
+
+The timeline, map, people profiles and quiz then work offline. Links to
+outside sources (Wikipedia, museum pages…) still need a connection.
+Updates arrive by themselves: whenever the phone is online, the app loads the
+newest version and keeps that copy for offline use.
+
+How it works: `manifest.webmanifest` describes the app and its icons
+(`icons/`, `favicon.ico`), and the service worker `sw.js` keeps a copy of the
+page, scripts and styles. When you add, rename or remove one of those files,
+update the lists in `sw.js` and bump `CACHE_VERSION`. Service workers only run
+over https or on localhost, so test offline mode through a local server
+(`python3 -m http.server`, then http://localhost:8000/), not by opening the
+file directly.
