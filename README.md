@@ -48,7 +48,7 @@ Open `index.html` in a browser, or publish it with GitHub Pages
 Sử Việt can be installed as an app and works without a network once it has
 been opened online.
 
-1. Open https://tuongphanbase-stack.github.io/su-viet/ on the phone and let
+1. Open https://tuongphanbase.github.io/su-viet/ on the phone and let
    the page load fully.
 2. Install it:
    - **Android (Chrome, Edge, Samsung Internet):** menu ⋮ -> *Install app*
